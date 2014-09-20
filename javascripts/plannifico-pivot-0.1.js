@@ -83,6 +83,10 @@ PlannificoPivot.prototype.refresh = function () {
 	this.addPivotArea ();
 	
 	this.applyDroppable ();
+
+	$('#right-container').accordion ({
+      heightStyle: "content"
+    });
 }
 
 /*Private methods*/
@@ -93,6 +97,13 @@ PlannificoPivot.prototype.refresh = function () {
 */
 PlannificoPivot.prototype.addPivotArea = function () {	
 
+	var pivot_selection_header = $ ("<h3>", {
+
+		"id": 'pivot-selection-header'/*,
+		"class": 'span-20'*/
+			
+	}).appendTo (this.rightContainer).html (this.configuration.selectionHeaderLabel);
+
 	var pivot_area = $ ("<div>", {
 		
 		"id": 'pivot-area'
@@ -101,25 +112,26 @@ PlannificoPivot.prototype.addPivotArea = function () {
 	
 	var pivot_selection = $ ("<div>", {
 		
-		"id": 'pivot-selection'
+		"id": 'pivot-selection',
+		"class": 'span-18'
 			
 	}).appendTo (pivot_area);
 	
-	var pivot_selection_header = $ ("<div>", {
-		
-		"id": 'pivot-selection-header',
-		"class": 'span-20'
-			
-	}).appendTo (pivot_selection).html (this.configuration.selectionHeaderLabel);
 
 	this.createPivotSelection (pivot_selection);
+
+	var pivot_selection_header = $ ("<h3>", {
+		"id": 'pivot-data-header'/*,
+		"class": 'span-20'*/
+			
+	}).appendTo (this.rightContainer).html (this.configuration.emptySelectionLabel.dataArea);
 	
 	var pivot_data = $ ("<div>", {
 		
 		"id": 'pivot-data',
-		"class": 'span-20'
+		"class": 'span-15'
 			
-	}).appendTo (pivot_area).html (this.configuration.emptySelectionLabel.dataArea);
+	}).appendTo (this.rightContainer).html ("data");
 }	
 
 /*
@@ -130,28 +142,28 @@ PlannificoPivot.prototype.createPivotSelection = function (pivot_selection) {
 	var pivot_selection_rows = $ ("<div>", {
 		
 		"id": 'pivot-selection-rows',
-		"class": 'span-4 border ui-widget-header droppable-dim'
+		"class": 'small span-5 border ui-widget-header droppable-dim'
 			
 	}).appendTo (pivot_selection).html (this.configuration.emptySelectionLabel.rows);
 	
 	var pivot_selection_cols = $ ("<div>", {
 		
 		"id": 'pivot-selection-cols',
-		"class": 'span-4 border ui-widget-header droppable-dim'
+		"class": 'small span-5 border ui-widget-header droppable-dim'
 			
 	}).appendTo (pivot_selection).html (this.configuration.emptySelectionLabel.cols);
 	
 	var pivot_selection_measures = $ ("<div>", {
 		
 		"id": 'pivot-selection-measures',
-		"class": 'span-4 border ui-widget-header droppable-measure'
+		"class": 'small span-5	 border ui-widget-header droppable-measure'
 			
 	}).appendTo (pivot_selection).html (this.configuration.emptySelectionLabel.measures);
 	
 	var pivot_selection_filters = $ ("<div>", {
 		
 		"id": 'pivot-selection-filters',
-		"class": 'span-6 border ui-widget-header droppable-filter'
+		"class": 'small span-15 border ui-widget-header droppable-filter'
 			
 	}).appendTo (pivot_selection).html (this.configuration.emptySelectionLabel.filters);
 
@@ -161,9 +173,7 @@ PlannificoPivot.prototype.addAttributeSelection = function (dims_container, id_p
 
 	var dim_attribute_selection = $ ("<ul>", {
 				
-		"id":  id_prefix + dimension + '_attribute_sel'/*,
-		"class": 'span-1',
-		"style": 'display:none'*/
+		"id":  id_prefix + dimension + '_attribute_sel'
 		
 	}).appendTo (dims_container);
 
@@ -249,20 +259,23 @@ PlannificoPivot.prototype.addDraggableMeasures = function (label, elements, id_p
 		$ ("<li>", {
 
 			"id": id_prefix + element,
-			"class": 'small span-1'
+			"pl-label": element,
+			"class": 'small span-1 ' + additional_classes,
+			"parent-id":'measure-menu'
+			
 				
 		}).appendTo (measures).html (element);		
 		
 		$("#" + id_prefix + element).addClass (additional_classes);
 		
 	}		
+	$( "#measure-menu" ).menu();
 
 	$( "#accordion-measures" ).accordion(
 	{
       		heightStyle: "content", active: "false", collapsible: "true"
     	});
 
-	$( "#measure-menu" ).menu();
 }
 
 /*
@@ -281,9 +294,10 @@ PlannificoPivot.prototype.applyDroppable = function () {
 	});
 	
 	$(".draggable-measure").draggable({
-		revert: "invalid", 
+		revert: "true", 
 		scope: ".pivot-selection-measure",
-		cursor: 'move'
+		cursor: 'move',		 
+		helper: "clone"
 	});
 
 	this.applyDroppableDim ();
@@ -295,6 +309,8 @@ PlannificoPivot.prototype.applyDroppable = function () {
 	Apply the droppable behavior to the dimensions selection box
 */
 PlannificoPivot.prototype.applyDroppableDim = function () {	
+
+	var self = this;
 
 	$(".droppable-dim").droppable({
 		
@@ -313,20 +329,25 @@ PlannificoPivot.prototype.applyDroppableDim = function () {
 
 			var dropped_dim = $('<div>', {"id": 'dropped-' + dropped_dim_id,"class": 'span-5'}).appendTo (dropTarget);
 			
-			var dropped_dim_lb = $('<div>', {"class": 'span-3 border'}).appendTo (dropped_dim).html($(ui.draggable).attr ("pl-label"));
-			
-			var dropped_dim_del_btn = $('<div>', 
+			var dropped_dim_lb = $('<button>', {
 
-				{"id": 'delbtn-' + dropped_dim_id, "class": 'span-1'}
+				"id": 'delbtndim-' + dropped_dim_id, 
+				"class": 'span-4'}
+			).appendTo (dropped_dim).html($(ui.draggable).attr ("pl-label"));
+			
+			/*var dropped_dim_del_btn = $('<div>', 
+
+				{"id": 'delbtn-' + dropped_dim_id, "class": 'span-2'}
 
 			).appendTo (dropped_dim).html("x");
-			
-			$("#delbtn-" + dropped_dim_id).click (function() {
+			*/
+			$( "#delbtndim-" + dropped_dim_id )
+			      .button()
+			      .click (function( event ) {
 		
 				console.log("$(this).id " + $(this).attr ("id"));
 				
-				var dropped_id = $(this).attr ("id").replace ("delbtn-","");				
-				
+				var dropped_id = $(this).attr ("id").replace ("delbtndim-","");						
 
 				$("#dropped-" + dropped_id).remove();
 		
@@ -336,7 +357,7 @@ PlannificoPivot.prototype.applyDroppableDim = function () {
 
 				console.log ("parent-id " + $("#droppable-" + dropped_id).attr ("parent-id"));
 
-				$("#droppable-" + dropped_id).show();
+				//$("#droppable-" + dropped_id).show();
 			});
 			
 			$(ui.draggable).hide();
@@ -365,6 +386,8 @@ PlannificoPivot.prototype.applyDroppableDim = function () {
 */
 PlannificoPivot.prototype.applyDroppableMeasures = function () {	
 
+	var self = this;
+
 	$(".droppable-measure").droppable({
 		
 		scope: ".pivot-selection-measure",
@@ -376,18 +399,44 @@ PlannificoPivot.prototype.applyDroppableMeasures = function () {
 			console.log ("dropped " + $(ui.draggable).attr ("id"));
 			
 			var dropTarget = $(this);
+			
+			var dropped_measure_id = $(ui.draggable).attr ("id");
 
-			jQuery('<div>',{                                                
-				}).appendTo(dropTarget)
-					.attr("id",$(ui.draggable).attr ("id"))
-					.append($(ui.draggable).text());
+			var dropped_m = $('<div>', {"id": 'dropped-' + dropped_measure_id,"class": 'span-5'}).appendTo (dropTarget);
 			
-			ui.draggable.remove();
-			
+			var dropped_m_lb = $('<button>', {
+
+				"id": 'delbtn-measure-' + dropped_measure_id, 
+				"class": 'span-5'}
+			).appendTo (dropped_m).html ($(ui.draggable).attr ("pl-label"));
+
 			console.log ("dropTarget.id " + $(dropTarget).attr ("id"));
 			
-			var target_id = $(dropTarget).attr ("id");
+			$( '#delbtn-measure-' + dropped_measure_id )
+			      .button()
+			      .click (function( event ) {
+		
+				console.log("$(this).id " + $(this).attr ("id"));
 				
+				var dropped_id = $(this).attr ("id").replace ("delbtn-measure-","");						
+
+				$("#dropped-" + dropped_id).remove();
+		
+				$("#" + $(this).attr("id") + "_attribute_sel").toggle();
+				
+				console.log("dropped id " + dropped_id);
+
+				$("#" + dropped_id).show();
+
+				//console.log ("parent-id: " + $("#" + dropped_id).attr ("parent-id"));
+
+				$("#" + dropped_id).show();
+			});
+
+			$(ui.draggable).hide();			
+
+			var target_id = $(dropTarget).attr ("id");
+	
 			if (target_id == "pivot-selection-measures") {
 				
 				console.log ("dataNavigationInvoker.measures " + $(ui.draggable).text());
@@ -427,40 +476,58 @@ PlannificoPivot.prototype.applyDroppableFilters = function () {
 			
 			var dropTarget = $(this);
 
-			var dropped_dim = $('<div>', {"id": 'dropped-' + dropped_dim_id,"class": 'span-5'}).appendTo (dropTarget);
+			var dropped_dim = $('<div>', {"id": 'dropped-' + dropped_dim_id,"class": 'span-20'}).appendTo (dropTarget);
 			
-			var dropped_dim_lb = $('<div>', {"class": 'span-3 border'}).appendTo (dropped_dim).html($(ui.draggable).attr ("pl-label"));
+			var dropped_dim_lb = $('<button>', 
+				{
+				"id": 'delbtn-filter-' + dropped_dim_id, 
+				"class": 'span-5 border'}
+			).appendTo (dropped_dim).html($(ui.draggable).attr ("pl-label"));
 			
-			var comparison_sign = $('<div>', {"class": 'span-2 border'}).appendTo (dropped_dim).html ("=");
+			
+			var comparison_sign = $('<select>', 
+				{"id": 'comparison-selection-' + dropped_dim_id, 
+				"class": 'span-2 border'}).appendTo (dropped_dim);
 
-			var filter_selection = $('<select>', 
+			comparison_sign.append(new Option("=", "="));
 
-				{"id": 'filter-selection', "class": 'span-3 border'}
-
-			).appendTo (dropped_dim).html("select element");
+			$( "#comparison-selection-" + dropped_dim_id ).selectmenu ();
 
 			var dimension = $(ui.draggable).attr ("pl-label").split(".")[0];
 			var attribute = $(ui.draggable).attr ("pl-label").split(".")[1];
+			
+			var filter_selection = $('<select>', 
+
+				{"id": 'filter-selection-' + dropped_dim_id, "class": 'span-5 border', "dimension": dimension, "attribute": attribute}
+
+			).appendTo (dropped_dim);
+
+			
 
 			var filter_elements = self.getDimAttributeElements (dimension, attribute);
 
 			$.each (filter_elements,function (index,element) {
 
-				filter_selection.append(new Option(element.text, element.value));
+				filter_selection.append(new Option(element, element));
+			});
+			
+			$( "#filter-selection-" + dropped_dim_id ).selectmenu ({
+
+				"change": function( event, data ) {
+
+					console.log ("filters " + data.item.value);
+					console.log ("dim " + $(this).attr("dimension"));
+					console.log ("attr " + $(this).attr("attribute"));
+			       	}
 			});
 
-			var dropped_dim_del_btn = $('<div>', 
-
-				{"id": 'delbtn-' + dropped_dim_id, "class": 'span-1'}
-
-			).appendTo (dropped_dim).html("x");
-			
-			$("#delbtn-" + dropped_dim_id).click (function() {
-		
+			$( "#delbtn-filter-" + dropped_dim_id )
+			      .button()
+			      .click (function( event ) {
+				
 				console.log("$(this).id " + $(this).attr ("id"));
 				
-				var dropped_id = $(this).attr ("id").replace ("delbtn-","");				
-				
+				var dropped_id = $(this).attr ("id").replace ("delbtn-filter-","");	
 
 				$("#dropped-" + dropped_id).remove();
 		
@@ -470,7 +537,7 @@ PlannificoPivot.prototype.applyDroppableFilters = function () {
 
 				console.log ("parent-id " + $("#droppable-" + dropped_id).attr ("parent-id"));
 
-				$("#droppable-" + dropped_id).show();
+				$("#droppable-" + dropped_id).show ();
 			});
 			
 			$(ui.draggable).hide();
@@ -479,13 +546,15 @@ PlannificoPivot.prototype.applyDroppableFilters = function () {
 			
 			var target_id = $(dropTarget).attr ("id");
 			
-			if ((target_id == "pivot-selection-rows") || (target_id == "pivot-selection-cols")) {
+			if (target_id == "pivot-selection-filters") {
 				
-				console.log ("dataNavigationInvoker.groupby " + $(ui.draggable).attr("id"));
+				console.log ("filter.dimension " + dimension);
+				console.log ("filter.attribute " + attribute);
+				console.log ("filter.value " + $( "#filter-selection-" + dropped_dim_id ).val());
 				
-				self.currentDimensions.push ($(ui.draggable).text());
+				self.currentFilters.push ({});
 				
-				self.onChangeQuery (self.currentDimensions,self.currentMeasures,self.currentFilters);
+				self.currentData = self.onChangeQuery (self.currentDimensions,self.currentMeasures,self.currentFilters);
 				
 				//dataNavigationInvoker.groupby.push ($(ui.draggable).text());					
 			}

@@ -31,7 +31,7 @@
 					"region":["USA","Italy","Italy"]},
 				product: {
 					"code":["P1","P2","P3"], 
-					"name":["Sport-100 Helmet, Blue","Touring-3000 Blue, 50","Road-750 Black, 44"], 
+					"description":["Sport-100 Helmet, Blue","Touring-3000 Blue, 50","Road-750 Black, 44"], 
 					"category":["Fenders","Touring Bikes","Mountain Bikes"], 
 					"macro-category":["Accessories","Bikes","Bikes"]},
 
@@ -44,14 +44,14 @@
 	var p_pivot = new PlannificoPivot ($( "#main_container" ), {
 	
 			dimensionsLabel: "Dimensions:",
-			measuresLabel: "Measures:",
+			measuresLabel: "Measures",
 			selectionHeaderLabel: "Selection:",
 			emptySelectionLabel: {
 				rows: "drag rows...",
 				cols: "drag cols...",
 				measures: "drag measures...",
 				filters: "drag filters...",
-				dataArea: "show data..."			
+				dataArea: "Data:"			
 			},
 			dimensions: {			
 				customer: ["code","name","region"], 
@@ -69,7 +69,7 @@
 		
 			console.log ("getDimAttributeElements " + dimension + "." + attribute);
 
-			return dimension_elements[dimension][attribute];
+			return dimension_elements [dimension][attribute];
 		}
 	);
 	
