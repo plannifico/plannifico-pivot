@@ -23,6 +23,23 @@
 	<div id="main_container">
 	</div>
 	<script>
+
+	var dimension_elements = {			
+				customer: {
+					"code":["C1","C2","C3"], 
+					"name":["M.Rossi","R.Alfano","S.Dutto"], 
+					"region":["USA","Italy","Italy"]},
+				product: {
+					"code":["P1","P2","P3"], 
+					"name":["Sport-100 Helmet, Blue","Touring-3000 Blue, 50","Road-750 Black, 44"], 
+					"category":["Fenders","Touring Bikes","Mountain Bikes"], 
+					"macro-category":["Accessories","Bikes","Bikes"]},
+
+				time: {
+					"date":	["20130101","20130201","20130301","20130402","20130503","20130604","20130704"],
+					"month":["201301","201302","201303","201304"],
+					"year":	["2013"]}
+			};
 	
 	var p_pivot = new PlannificoPivot ($( "#main_container" ), {
 	
@@ -47,6 +64,12 @@
 		
 			console.log ("onChangeQuery");
 			console.log ("onChangeQuery called " + q_dimensions + " " + q_measures + " " + q_filters);
+		},
+		function (dimension, attribute) {
+		
+			console.log ("getDimAttributeElements " + dimension + "." + attribute);
+
+			return dimension_elements[dimension][attribute];
 		}
 	);
 	
