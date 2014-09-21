@@ -18,7 +18,8 @@ limitations under the License.*/
 - i_configuration: configuration parameters in the following format:
 
 - i_on_change_query: the function that must be called every time the layout of the pivot change in order to get the new data with the following parameters:
-	* q_dimensions: an array containing the dimensions to show in the layout
+	* q_dimensions_rows: an array containing the dimensions to show in the layout
+	* q_dimensions_cols: an array containing the dimensions to show in the layout
 	* q_measures: an array containing the measure to show in the layout
 	* q_filters: an array of object in the format {dimension: value} in order to filter the dataset
 
@@ -32,7 +33,8 @@ function PlannificoPivot (i_container, i_configuration, i_on_change_query, i_get
 	this.container = i_container;
 	this.configuration = i_configuration;
 	
-	this.currentDimensions = [];
+	this.currentDimensionsCols = [];
+	this.currentDimensionsRows = [];
 	this.currentMeasures = [];
 	this.currentFilters = [];
 	
@@ -41,7 +43,7 @@ function PlannificoPivot (i_container, i_configuration, i_on_change_query, i_get
 		this.onChangeQuery = i_on_change_query;		
 		
 	} else 
-		this.onChangeQuery = function (d,m,f) {console.log ("this.onChangeQuery not set");};
+		this.onChangeQuery = function (dr,dc,m,f) {console.log ("this.onChangeQuery not set");};
 	
 	if (i_get_dim_attribute_elements && (typeof i_get_dim_attribute_elements == "function")) {
 		
@@ -263,7 +265,6 @@ PlannificoPivot.prototype.addDraggableMeasures = function (label, elements, id_p
 			"class": 'small span-1 ' + additional_classes,
 			"parent-id":'measure-menu'
 			
-				
 		}).appendTo (measures).html (element);		
 		
 		$("#" + id_prefix + element).addClass (additional_classes);
@@ -306,6 +307,36 @@ PlannificoPivot.prototype.applyDroppable = function () {
 }	
 
 /*
+	Remove the given element from the current layout structure
+*/
+PlannificoPivot.prototype.removeCurrentLyoutElements = function (element) {	
+	
+	var index = this.currentDimensionsRows.indexOf (element);
+	
+	if (index > -1) {
+
+		this.currentDimensionsRows.splice(index, 1);
+	
+	} else {
+	
+		index = this.currentDimensionsCols.indexOf (element);
+		
+		if (index > -1) {
+
+			this.currentDimensionsCols.splice(index, 1);
+		} else {
+		
+			index = this.currentMeasures.indexOf (element);
+			
+			if (index > -1) {
+
+				this.currentMeasures.splice(index, 1);
+			}
+		}
+	}
+}
+
+/*
 	Apply the droppable behavior to the dimensions selection box
 */
 PlannificoPivot.prototype.applyDroppableDim = function () {	
@@ -329,18 +360,14 @@ PlannificoPivot.prototype.applyDroppableDim = function () {
 
 			var dropped_dim = $('<div>', {"id": 'dropped-' + dropped_dim_id,"class": 'span-5'}).appendTo (dropTarget);
 			
+			var attribute = $(ui.draggable).attr ("pl-label");
+			
 			var dropped_dim_lb = $('<button>', {
 
 				"id": 'delbtndim-' + dropped_dim_id, 
 				"class": 'span-4'}
-			).appendTo (dropped_dim).html($(ui.draggable).attr ("pl-label"));
+			).appendTo (dropped_dim).html(attribute);
 			
-			/*var dropped_dim_del_btn = $('<div>', 
-
-				{"id": 'delbtn-' + dropped_dim_id, "class": 'span-2'}
-
-			).appendTo (dropped_dim).html("x");
-			*/
 			$( "#delbtndim-" + dropped_dim_id )
 			      .button()
 			      .click (function( event ) {
@@ -357,6 +384,8 @@ PlannificoPivot.prototype.applyDroppableDim = function () {
 
 				console.log ("parent-id " + $("#droppable-" + dropped_id).attr ("parent-id"));
 
+				self.removeCurrentLyoutElements (attribute);
+				
 				//$("#droppable-" + dropped_id).show();
 			});
 			
@@ -370,9 +399,10 @@ PlannificoPivot.prototype.applyDroppableDim = function () {
 				
 				console.log ("dataNavigationInvoker.groupby " + $(ui.draggable).attr("id"));
 				
-				self.currentDimensions.push ($(ui.draggable).text());
+				if (target_id == "pivot-selection-rows") self.currentDimensionsRows.push (attribute);
+				if (target_id == "pivot-selection-cols") self.currentDimensionsCols.push (attribute);
 				
-				self.onChangeQuery (self.currentDimensions,self.currentMeasures,self.currentFilters);
+				self.onChangeQuery (self.currentDimensionsRows,self.currentDimensionsCols,self.currentMeasures,self.currentFilters);
 				
 				//dataNavigationInvoker.groupby.push ($(ui.draggable).text());					
 			}
@@ -429,8 +459,8 @@ PlannificoPivot.prototype.applyDroppableMeasures = function () {
 				$("#" + dropped_id).show();
 
 				//console.log ("parent-id: " + $("#" + dropped_id).attr ("parent-id"));
-
-				$("#" + dropped_id).show();
+				
+				self.removeCurrentLyoutElements ($(ui.draggable).attr ("pl-label"));
 			});
 
 			$(ui.draggable).hide();			
@@ -443,7 +473,7 @@ PlannificoPivot.prototype.applyDroppableMeasures = function () {
 				
 				self.currentMeasures.push ($(ui.draggable).text());
 				
-				self.onChangeQuery (self.currentDimensions,self.currentMeasures,self.currentFilters);
+				self.onChangeQuery (self.currentDimensionsRows,self.currentDimensionsCols,self.currentMeasures,self.currentFilters);
 				//dataNavigationInvoker.measures.push ($(ui.draggable).text());
 			}
 				
@@ -554,7 +584,7 @@ PlannificoPivot.prototype.applyDroppableFilters = function () {
 				
 				self.currentFilters.push ({});
 				
-				self.currentData = self.onChangeQuery (self.currentDimensions,self.currentMeasures,self.currentFilters);
+				self.currentData = self.onChangeQuery (self.currentDimensionsRows,self.currentDimensionsCols,self.currentMeasures,self.currentFilters);
 				
 				//dataNavigationInvoker.groupby.push ($(ui.draggable).text());					
 			}
