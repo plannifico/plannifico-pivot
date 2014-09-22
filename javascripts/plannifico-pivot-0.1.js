@@ -150,64 +150,98 @@ PlannificoPivot.prototype.refreshDataAreaArea = function () {
 			
 				}).appendTo (table_container);
 
-				data = data.sort (function (row_1,row_2) {
+				var m_associative = [];
+				var cols_attributes = [];
+				var rows_attributes = [];
+				
+				var value_to_attribute = {};
+				
+				//Create the supporting structure needed to create the pivot:
+				//an associative array for each measure that given the attributes in row and column returns the measure quantity:
+				$.each (data, function (index, row) {			
 
-					var sort_idx = 0;
+					var col_attributes_string = "";
+					var row_attributes_string = "";
 					
-					$.each (row_1, function (idx, field) {
-
-						if (sort_idx != 0) return;
-
-						if (field.measure) return;
-
-						if (field.attribute != row_2 [idx].attribute) return;
-
-						if (field.value > row_2 [idx].value) 
-							sort_idx = 1;
+					$.each (row, function (field_idx, field) {
+					
+						if (field.measure) {						
 						
-						else if (field.value < row_2 [idx].value)
-							sort_idx = -1;
-						else
-							sort_idx = 0;						
-										
+							if (m_associative.indexOf (field.measure) == -1) m_associative [field.measure] = [];							
+						
+						} else {
+							
+							if (self.currentDimensionsRows.indexOf (field.attribute) != -1) {
+							
+								row_attributes_string += field.value + ";";
+								
+							} else if (self.currentDimensionsCols.indexOf (field.attribute) != -1) { 
+							
+								col_attributes_string += field.value + ";";
+								
+								value_to_attribute [field.value] = field.attribute;
+							}
+						}
 					});
 					
-					return sort_idx;
+					if (cols_attributes.indexOf (col_attributes_string) == -1) cols_attributes.push (col_attributes_string);
+					if (rows_attributes.indexOf (row_attributes_string) == -1) rows_attributes.push (row_attributes_string);
+					
+					$.each (m_associative, function (m_idx, m) {
+					
+						m.push (row_attributes_string + "_" + col_attributes_string);
+					});				
 				});
+				
+				//Sort the attributes in rows:
+				rows_attributes = rows_attributes.sort (function (row_1,row_2) {
+				
+					if (row_1 > row_2) return 1;
+					else if (row_1 < row_2) return -1;
+					else return 0;
+				});
+				
+				//Sort the attributes in columns:
+				cols_attributes = cols_attributes.sort (function (row_1,row_2) {
+				
+					if (row_1 > row_2) return 1;
+					else if (row_1 < row_2) return -1;
+					else return 0;
+				});
+				
 
 				var col_headers = [];
 
-				//Create an header for each attribute in column
+				//Create an header for each attribute in column:
 				$.each (self.currentDimensionsCols, function (idx, col_field) {
 
 					var col_h = $ ("<tr>", {
 
-						"id": 'col-header-' + col_field
+						"id": 'col-header-' + col_field.replace (".","_")
 		
 					}).appendTo (pivot_table);					
 
 					col_headers.push (col_h);
 				});
 				
+				//Create the basic header where attributes in row are shown:
 				var html_table_header = $ ("<tr>", {
 
 					"id": 'row-header'
 		
 				}).appendTo (pivot_table);
 
-				//Put in the header the attribute in row:
+				//Put in the basic header the attribute in row:
 				$.each (self.currentDimensionsRows, function (idx, row_field) {
 
 					$.each (col_headers, function (idx, header) {
 					
 						$ ("<th>", {
 
-							"id": 'col-header-' + row_field
+							"id": 'col-header-' + row_field + "-" + idx
 
 						}).appendTo (header).html ("-");
 					});
-
-					
 
 					$ ("<th>", {
 
@@ -215,76 +249,65 @@ PlannificoPivot.prototype.refreshDataAreaArea = function () {
 
 					}).appendTo (html_table_header).html (row_field);
 				});
-
-				$.each (self.currentMeasures, function (idx, m_field) {
-
-					var th = $ ("<th>", {
-
-						"id": 'header-' + m_field
-
-					}).appendTo (html_table_header).html (m_field);
-				});
 				
-
-				$.each (data, function (index, row) {
+				//Add the attribute in row:
+				$.each (rows_attributes, function (index, row) {
 
 					var html_row = $ ("<tr>", {
 
 						"id": 'pivot-table-row-' + index
 			
 					}).appendTo (pivot_table);
+					
+					var fields = row.split (";");
+					
+					console.log ("fields: " + fields);
+					
+					$.each (fields, function (idx_field, field) {
+					
+						if (field == "") return; 
+					
+						var th = $ ("<td>", {
 
-					//Sort the row element to have rows, columns, measures
-					data = data.sort (function (field_1,field_2) {
+							"id": 'td-field-' + idx_field
 
-						if (field_1.measure) return 1;
-
-						if (	(self.currentDimensionsRows.indexOf (field_1.attribute) != -1) &&
-					   		(self.currentDimensionsCols.indexOf (field_2.attribute) != -1))
-							return 1;
-						else if ((self.currentDimensionsCols.indexOf (field_1.attribute) != -1) &&
-					   		(self.currentDimensionsRow.indexOf (field_2.attribute) != -1))
-							return -1;
-						else
-							return 0;
+						}).appendTo (html_row).html (field);
 					});
-
-					//var current_row = [];
-
-					//Now fields are ordered:
-					$.each (row, function (index, field) {
-
-						if (field.measure) console.log ("measure: " + field.value);
-						
-						if (self.currentDimensionsRows.indexOf (field.attribute) != -1) {
-							
-							console.log ("row: " + field.value);
-
-							var th = $ ("<td>", {
-
-								"id": 'td-row-' +index + "-" + field.attribute
-
-							}).appendTo (html_row).html (field.value);
-
-							//current_row.push ();
-							
-						}
-						if (self.currentDimensionsCols.indexOf (field.attribute) != -1) {
-							//TODO
-							console.log ("column:"  + field.value);
-
-							var header = $("#col-header-" + field.attribute);
-
-							$ ("<th>", {
-
-								"id": 'td-col-' + index
-			
-							}).appendTo (header).html (field.value);
-						}
-						
-					});					
 				});
 				
+				//Add the attribute in row:
+				$.each (cols_attributes, function (index, col) {
+				
+					console.log ("col fields " + col);
+				
+					var fields = col.split (";");
+					
+					$.each (self.currentMeasures, function (idx_m, measure) {
+					
+						$.each (fields, function (idx_field, field) {
+						
+							if (field == "") return; 
+						
+							//get the header where to add the attribute:
+							var field_col_header = $("#col-header-" + value_to_attribute [field].replace (".","_"));
+					
+							console.log ("value_to_attribute [field] " + value_to_attribute [field] + " " + field_col_header.id);
+							
+							var th = $ ("<th>", {
+
+								"id": 'th-field-' + value_to_attribute [field] + "_" + idx_field
+
+							}).appendTo (field_col_header).html (field);
+						
+						});
+						
+						var th = $ ("<th>", {
+
+							"id": 'th-measure-' + measure + "_" + idx_m
+
+						}).appendTo ($("#row-header")).html (measure);
+					});
+				});
 			}				
 		);
 	
