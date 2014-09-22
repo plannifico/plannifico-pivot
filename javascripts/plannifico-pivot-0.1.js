@@ -120,7 +120,7 @@ PlannificoPivot.prototype.refreshDataAreaArea = function () {
 		data_area.empty ();
 	}	
 	
-	$ ("<div>", {
+	var table_container = $ ("<div>", {
 		
 		"id": 'data-grid-container',
 		"class": 'span-15'
@@ -142,14 +142,13 @@ PlannificoPivot.prototype.refreshDataAreaArea = function () {
 			this.currentFilters,
 			function (data) {
 
-				console.log ("onDataReady()");
+				console.log ("onDataReady()");				
 				
-				//TODO
-				var pivot_selection_header = $ ("<h3>", {
+				var pivot_table = $ ("<table>", {
 
-					"id": 'pivot-selection-header'
+					"id": 'pivot-table'
 			
-				}).appendTo (this.rightContainer);
+				}).appendTo (table_container);
 
 				data = data.sort (function (row_1,row_2) {
 
@@ -176,15 +175,112 @@ PlannificoPivot.prototype.refreshDataAreaArea = function () {
 					return sort_idx;
 				});
 
+				var col_headers = [];
+
+				//Create an header for each attribute in column
+				$.each (self.currentDimensionsCols, function (idx, col_field) {
+
+					var col_h = $ ("<tr>", {
+
+						"id": 'col-header-' + col_field
+		
+					}).appendTo (pivot_table);					
+
+					col_headers.push (col_h);
+				});
+				
+				var html_table_header = $ ("<tr>", {
+
+					"id": 'row-header'
+		
+				}).appendTo (pivot_table);
+
+				//Put in the header the attribute in row:
+				$.each (self.currentDimensionsRows, function (idx, row_field) {
+
+					$.each (col_headers, function (idx, header) {
+					
+						$ ("<th>", {
+
+							"id": 'col-header-' + row_field
+
+						}).appendTo (header).html ("-");
+					});
+
+					
+
+					$ ("<th>", {
+
+						"id": 'header-' + row_field
+
+					}).appendTo (html_table_header).html (row_field);
+				});
+
+				$.each (self.currentMeasures, function (idx, m_field) {
+
+					var th = $ ("<th>", {
+
+						"id": 'header-' + m_field
+
+					}).appendTo (html_table_header).html (m_field);
+				});
+				
+
 				$.each (data, function (index, row) {
 
+					var html_row = $ ("<tr>", {
+
+						"id": 'pivot-table-row-' + index
+			
+					}).appendTo (pivot_table);
+
+					//Sort the row element to have rows, columns, measures
+					data = data.sort (function (field_1,field_2) {
+
+						if (field_1.measure) return 1;
+
+						if (	(self.currentDimensionsRows.indexOf (field_1.attribute) != -1) &&
+					   		(self.currentDimensionsCols.indexOf (field_2.attribute) != -1))
+							return 1;
+						else if ((self.currentDimensionsCols.indexOf (field_1.attribute) != -1) &&
+					   		(self.currentDimensionsRow.indexOf (field_2.attribute) != -1))
+							return -1;
+						else
+							return 0;
+					});
+
+					//var current_row = [];
+
+					//Now fields are ordered:
 					$.each (row, function (index, field) {
 
 						if (field.measure) console.log ("measure: " + field.value);
 						
-						if (self.currentDimensionsRows.indexOf(field.attribute) != -1) console.log ("row: " + field.value);
-						if (self.currentDimensionsCols.indexOf(field.attribute) != -1) console.log ("column:"  + field.value);
+						if (self.currentDimensionsRows.indexOf (field.attribute) != -1) {
+							
+							console.log ("row: " + field.value);
 
+							var th = $ ("<td>", {
+
+								"id": 'td-row-' +index + "-" + field.attribute
+
+							}).appendTo (html_row).html (field.value);
+
+							//current_row.push ();
+							
+						}
+						if (self.currentDimensionsCols.indexOf (field.attribute) != -1) {
+							//TODO
+							console.log ("column:"  + field.value);
+
+							var header = $("#col-header-" + field.attribute);
+
+							$ ("<th>", {
+
+								"id": 'td-col-' + index
+			
+							}).appendTo (header).html (field.value);
+						}
 						
 					});					
 				});
