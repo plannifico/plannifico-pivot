@@ -61,6 +61,13 @@ function PlannificoPivot (i_container, i_configuration, i_on_change_query, i_get
 	Completely refresh the pivot container
 */
 PlannificoPivot.prototype.refresh = function () {
+
+	this.isQueryChanged = true;
+	
+	this.currentDimensionsCols = [];
+	this.currentDimensionsRows = [];
+	this.currentMeasures = [];
+	this.currentFilters = [];
 	
 	if (this.container.children().length > 0) {
 	
@@ -150,15 +157,18 @@ PlannificoPivot.prototype.refreshDataAreaArea = function () {
 			
 				}).appendTo (table_container);
 
-				var m_associative = [];
 				var cols_attributes = [];
 				var rows_attributes = [];
 				
 				var value_to_attribute = {};
+
+				var cross_values = {};
 				
 				//Create the supporting structure needed to create the pivot:
 				//an associative array for each measure that given the attributes in row and column returns the measure quantity:
-				$.each (data, function (index, row) {			
+				$.each (data, function (index, row) {		
+
+					var measures_values = {};	
 
 					var col_attributes_string = "";
 					var row_attributes_string = "";
@@ -167,7 +177,7 @@ PlannificoPivot.prototype.refreshDataAreaArea = function () {
 					
 						if (field.measure) {						
 						
-							if (m_associative.indexOf (field.measure) == -1) m_associative [field.measure] = [];							
+							measures_values [field.measure] = field.value;							
 						
 						} else {
 							
@@ -183,14 +193,25 @@ PlannificoPivot.prototype.refreshDataAreaArea = function () {
 							}
 						}
 					});
+
+					col_attributes_string = col_attributes_string.substring(0, col_attributes_string.length - 1);
+					row_attributes_string = row_attributes_string.substring(0, row_attributes_string.length - 1);
 					
 					if (cols_attributes.indexOf (col_attributes_string) == -1) cols_attributes.push (col_attributes_string);
 					if (rows_attributes.indexOf (row_attributes_string) == -1) rows_attributes.push (row_attributes_string);
 					
-					$.each (m_associative, function (m_idx, m) {
+					console.log ("row_attributes_string " + row_attributes_string);
+					console.log ("col_attributes_string " + col_attributes_string);
 					
-						m.push (row_attributes_string + "_" + col_attributes_string);
-					});				
+					console.log ("measures_values " + measures_values);
+
+					if (!cross_values [row_attributes_string]) cross_values [row_attributes_string] = {};
+
+					cross_values [row_attributes_string][col_attributes_string] = measures_values;
+
+					console.log ("cross_values [row_attributes_string + _ + col_attributes_string] " + 
+						JSON.stringify (cross_values [row_attributes_string][col_attributes_string]));
+									
 				});
 				
 				//Sort the attributes in rows:
@@ -255,7 +276,7 @@ PlannificoPivot.prototype.refreshDataAreaArea = function () {
 
 					var html_row = $ ("<tr>", {
 
-						"id": 'pivot-table-row-' + index
+						"id": 'pt_row_' + row.replace(";","_").replace(".","_")
 			
 					}).appendTo (pivot_table);
 					
@@ -306,6 +327,38 @@ PlannificoPivot.prototype.refreshDataAreaArea = function () {
 							"id": 'th-measure-' + measure + "_" + idx_m
 
 						}).appendTo ($("#row-header")).html (measure);
+
+						//Add the values:
+						$.each (rows_attributes, function (index, row) {
+
+							console.log (JSON.stringify(cross_values));
+							console.log (JSON.stringify(cross_values [row][col]));
+
+							var value = "-";
+
+							if (cross_values [row]) {
+								
+								if(cross_values [row][col]) {
+
+									value = cross_values [row][col][measure];
+								}
+								
+							}
+							
+							var row_id_str = row.replace(";","_").replace(".","_");
+							var col_id_str = col.replace(";","_").replace(".","_");
+
+							var tr_row = $("#pt_row_" + row_id_str);
+							console.log ("row_id_str " + row_id_str);
+							console.log ("tr_row " + tr_row.attr("id"));
+
+							$("<td>", {
+
+								"id": 'td-measure-' + row_id_str + col_id_str
+
+							}).appendTo (tr_row).html (value);
+
+						});
 					});
 				});
 			}				
