@@ -36,7 +36,7 @@ limitations under the License.*/
 	* current_value: the current value of the measure	
 	
 */
-function PlannificoPivot (i_container, i_configuration, i_on_change_query, i_get_dim_attribute_elements, i_apply_measure_action) {
+function PlannificoPivot (i_container, i_configuration, i_on_change_query, i_get_dim_attribute_elements, i_apply_measure_action, i_menu_item) {
 
 	this.container = i_container;
 	this.configuration = i_configuration;
@@ -47,7 +47,9 @@ function PlannificoPivot (i_container, i_configuration, i_on_change_query, i_get
 	this.currentDimensionsRows = [];
 	this.currentMeasures = [];
 	this.currentFilters = [];
-	
+	this.menuItems = i_menu_item;
+
+
 	if (i_on_change_query && (typeof i_on_change_query == "function")) {
 		
 		this.onChangeQuery = i_on_change_query;		
@@ -432,29 +434,13 @@ PlannificoPivot.prototype.populatePivotDataStructure = function (data, cols_attr
 	});
 }
 
-PlannificoPivot.prototype.getActionTitle  = function (key) {
-
-	switch(key) {
-		case "propotionalInc":
-			return "Propotional Increment...";
-
-		case "weightedInc":
-			return "Weighted Increment...";
-
-		case "equalInc":
-			return "Equal Increment...";
-			
-		default:
-			return "";
-	}
-
-}
-
 
 PlannificoPivot.prototype.addContexMenu = function () {
 
 	var self = this;
-	
+
+	var menu_items = this.menuItems;
+
 	$.contextMenu({
 		selector: '.context-menu', 
 		build: function($trigger, e) {
@@ -463,62 +449,63 @@ PlannificoPivot.prototype.addContexMenu = function () {
 			var measure = $trigger.attr ("measure");
 			var current_value = $trigger.attr ("currentValue");
 			var filters = self.filtersToString();
-
-			menuItems = {
-				"propotionalInc": {name: self.getActionTitle ("propotionalInc"), icon: "edit"},
-				"weightedInc": {name: self.getActionTitle ("weightedInc"), icon: "cut"},
-				"equalInc": {name: self.getActionTitle ("equalInc"), icon: "copy"}		
-			}
-
+			
 			return {
-			callback: function(key, options) {
+				callback: function(key, options) {
 
-				var m = "clicked: " + key;
+					var m = "clicked: " + key;
 				
-				console.log ("clicked: " + key);
+					console.log ("clicked: " + key);
 				
-				var dialogBox = $("<div>", {
+					var dialogBox = $("<div>", {
 
-					"id": 'dialog-form',
-					"title": self.getActionTitle (key)
-					
-				}).html("<form><label for='new_value_field'>New Value:</label>"+ 
-						"<input type='text' name='new_value_field' id='new_value_field' value='" + current_value + "' class='text ui-widget-content ui-corner-all'>" + 
-						"<input type='submit'>" +
-						"</form>");				
+						"id": 'dialog-form',
+						"title": menu_items [key].name
+		
+					}).html("<form>" + 
+							"<fieldset>" +
+							"<label for='new_value_field'>New Value:</label>"+ 
+							"<input type='number' size='5' name='new_value_field' id='new_value_field' value='" + 
+								current_value + 
+								"' class='number ui-widget-content ui-corner-all'>" + 
+							"<input type='submit' tabindex='-1' style='position:absolute; top:-1000px'>" +
+							"</fieldset>" +
+						"</form>");		
 
-				var apply = function() {
+					var apply = function() {
 
-					var new_value = new_value_field.val();
+						var new_value = $("#new_value_field").val();
 					
-					console.log ("new value = " + new_value);
+						console.log ("new value = " + new_value);
 					
-					self.applyMeasureAction (key, select_str, filters, measure, current_value, new_value);
+						self.applyMeasureAction (key, select_str, filters, measure, current_value, new_value);
 					
-					dialogBox.dialog( "close" );
-				};
+						dialogBox.dialog( "close" );
+						dialogBox.remove();
+					};
 						
-				dialogBox.dialog({
-					autoOpen: false,
-					height: 250,
-					width: 300,
-					modal: true,
-					buttons: {
-						"Apply": apply, 
-						Cancel: function() {
+					dialogBox.dialog({
+						autoOpen: false,
+						height: 220,
+						width: 300,
+						modal: true,
+						buttons: {
+							"Apply": apply, 
+							Cancel: function() {
 						
-							dialogBox.dialog( "close" );
+								dialogBox.dialog( "close" );
+							}
 						}
-					}
-				});
-				dialogBox.find( "form" ).on( "submit", function( event ) {
-				  event.preventDefault();
-				  apply();
-				});
-				dialogBox.dialog( "open" );
+					});
+					dialogBox.find( "form" ).on( "submit", function( event ) {
+
+						event.preventDefault();
+						apply();
+					});
+					dialogBox.dialog( "open" );
 				
-			},
-			items: menuItems
+				},
+			items: menu_items
 			};
 		}
     	});
