@@ -432,61 +432,94 @@ PlannificoPivot.prototype.populatePivotDataStructure = function (data, cols_attr
 	});
 }
 
+PlannificoPivot.prototype.getActionTitle  = function (key) {
+
+	switch(key) {
+		case "propotionalInc":
+			return "Propotional Increment...";
+
+		case "weightedInc":
+			return "Weighted Increment...";
+
+		case "equalInc":
+			return "Equal Increment...";
+			
+		default:
+			return "";
+	}
+
+}
+
+
 PlannificoPivot.prototype.addContexMenu = function () {
 
 	var self = this;
-
+	
 	$.contextMenu({
 		selector: '.context-menu', 
 		build: function($trigger, e) {
 		    
 			var select_str = $trigger.attr ("selectString");
-			var measure = $trigger.attr ("selectString");
+			var measure = $trigger.attr ("measure");
 			var current_value = $trigger.attr ("currentValue");
 			var filters = self.filtersToString();
 
 			menuItems = {
-				"propotionalInc": {name: "Propotional Increment...", icon: "edit"},
-				"weightedInc": {name: "Weighted Increment...", icon: "cut"},
-				"equalInc": {name: "Equal Increment...", icon: "copy"}/*,
-				"sep1": "---------",
-				"quit": {name: "Quit", icon: "quit"}*/			
+				"propotionalInc": {name: self.getActionTitle ("propotionalInc"), icon: "edit"},
+				"weightedInc": {name: self.getActionTitle ("weightedInc"), icon: "cut"},
+				"equalInc": {name: self.getActionTitle ("equalInc"), icon: "copy"}		
 			}
 
 			return {
 			callback: function(key, options) {
 
 				var m = "clicked: " + key;
+				
+				console.log ("clicked: " + key);
+				
+				var dialogBox = $("<div>", {
 
-				dialog = $( "#dialog-form" ).dialog({
+					"id": 'dialog-form',
+					"title": self.getActionTitle (key)
+					
+				}).html("<form><label for='new_value_field'>New Value:</label>"+ 
+						"<input type='text' name='new_value_field' id='new_value_field' value='" + current_value + "' class='text ui-widget-content ui-corner-all'>" + 
+						"<input type='submit'>" +
+						"</form>");				
+
+				var apply = function() {
+
+					var new_value = new_value_field.val();
+					
+					console.log ("new value = " + new_value);
+					
+					self.applyMeasureAction (key, select_str, filters, measure, current_value, new_value);
+					
+					dialogBox.dialog( "close" );
+				};
+						
+				dialogBox.dialog({
 					autoOpen: false,
-					height: 300,
-					width: 350,
+					height: 250,
+					width: 300,
 					modal: true,
 					buttons: {
-						"Apply": function() {
-
-							self.applyMeasureAction (key, select_str, filters, measure, current_value);
-						}, 
+						"Apply": apply, 
 						Cancel: function() {
-							dialog.dialog( "close" );
+						
+							dialogBox.dialog( "close" );
 						}
 					}
 				});
+				dialogBox.find( "form" ).on( "submit", function( event ) {
+				  event.preventDefault();
+				  apply();
+				});
+				dialogBox.dialog( "open" );
 				
 			},
 			items: menuItems
 			};
-		},
-		callback: function(key, options) {
-		    
-		},
-		items: {
-		    "propotionalInc": {name: "Propotional Increment...", icon: "edit"},
-		    "weightedInc": {name: "Weighted Increment...", icon: "cut"},
-		    "equalInc": {name: "Equal Increment...", icon: "copy"}/*,
-		    "sep1": "---------",
-		    "quit": {name: "Quit", icon: "quit"}*/
 		}
     	});
 }
