@@ -27,9 +27,16 @@ limitations under the License.*/
 - i_get_dim_attribute_elements: the function that must be called every time a dimension attribute elements list is needed:
 
 	* dimension.attribute: the dimension attribute the list must be returned (<dimension_name>.<attribute_name>)
+
+- i_apply_measure_action: apply a planning action to the given measure identified by:
+	* action: the action to apply (propotionalInc|weightedInc|equalInc)
+	* select_string: the combination of attribute at the row and column selected
+	* filters: the filter currenty applied
+	* measure: the name of the measure to which apply the action
+	* current_value: the current value of the measure	
 	
 */
-function PlannificoPivot (i_container, i_configuration, i_on_change_query, i_get_dim_attribute_elements) {
+function PlannificoPivot (i_container, i_configuration, i_on_change_query, i_get_dim_attribute_elements, i_apply_measure_action) {
 
 	this.container = i_container;
 	this.configuration = i_configuration;
@@ -54,6 +61,13 @@ function PlannificoPivot (i_container, i_configuration, i_on_change_query, i_get
 		
 	} else 
 		this.getDimAttributeElements = function (d,a) {console.log ("this.getDimAttributeElements not set"); return []};
+
+	if (i_apply_measure_action && (typeof i_apply_measure_action == "function")) {
+		
+		this.applyMeasureAction = i_apply_measure_action;		
+		
+	} else 
+		this.applyMeasureAction = function (a,s,f,m,v) {console.log ("this.applyMeasureAction not set");};
 
 }
 
@@ -126,16 +140,15 @@ PlannificoPivot.prototype.refreshDataAreaArea = function () {
 	
 		data_area.empty ();
 	}	
+
+	var filters_label = "Filters: " + this.filtersToString();	
 	
 	var table_container = $ ("<div>", {
 		
 		"id": 'data-grid-container',
-		"class": 'span-15'
+		"class": 'small span-15'
 			
-	}).appendTo(data_area).html (
-		"columns: " + this.currentDimensionsCols + 
-		" rows: " + this.currentDimensionsRows + 
-		" measures: " + this.currentMeasures);
+	}).appendTo(data_area).html (filters_label);
 
 	console.log ("this.isQueryChanged " + this.isQueryChanged);
 
@@ -149,221 +162,333 @@ PlannificoPivot.prototype.refreshDataAreaArea = function () {
 			this.currentFilters,
 			function (data) {
 
-				console.log ("onDataReady()");				
-				
-				var pivot_table = $ ("<table>", {
-
-					"id": 'pivot-table'
-			
-				}).appendTo (table_container);
-
-				var cols_attributes = [];
-				var rows_attributes = [];
-				
-				var value_to_attribute = {};
-
-				var cross_values = {};
-				
-				//Create the supporting structure needed to create the pivot:
-				//an associative array for each measure that given the attributes in row and column returns the measure quantity:
-				$.each (data, function (index, row) {		
-
-					var measures_values = {};	
-
-					var col_attributes_string = "";
-					var row_attributes_string = "";
-					
-					$.each (row, function (field_idx, field) {
-					
-						if (field.measure) {						
-						
-							measures_values [field.measure] = field.value;							
-						
-						} else {
-							
-							if (self.currentDimensionsRows.indexOf (field.attribute) != -1) {
-							
-								row_attributes_string += field.value + ";";
-								
-							} else if (self.currentDimensionsCols.indexOf (field.attribute) != -1) { 
-							
-								col_attributes_string += field.value + ";";
-								
-								value_to_attribute [field.value] = field.attribute;
-							}
-						}
-					});
-
-					col_attributes_string = col_attributes_string.substring(0, col_attributes_string.length - 1);
-					row_attributes_string = row_attributes_string.substring(0, row_attributes_string.length - 1);
-					
-					if (cols_attributes.indexOf (col_attributes_string) == -1) cols_attributes.push (col_attributes_string);
-					if (rows_attributes.indexOf (row_attributes_string) == -1) rows_attributes.push (row_attributes_string);
-					
-					console.log ("row_attributes_string " + row_attributes_string);
-					console.log ("col_attributes_string " + col_attributes_string);
-					
-					console.log ("measures_values " + measures_values);
-
-					if (!cross_values [row_attributes_string]) cross_values [row_attributes_string] = {};
-
-					cross_values [row_attributes_string][col_attributes_string] = measures_values;
-
-					console.log ("cross_values [row_attributes_string + _ + col_attributes_string] " + 
-						JSON.stringify (cross_values [row_attributes_string][col_attributes_string]));
-									
-				});
-				
-				//Sort the attributes in rows:
-				rows_attributes = rows_attributes.sort (function (row_1,row_2) {
-				
-					if (row_1 > row_2) return 1;
-					else if (row_1 < row_2) return -1;
-					else return 0;
-				});
-				
-				//Sort the attributes in columns:
-				cols_attributes = cols_attributes.sort (function (row_1,row_2) {
-				
-					if (row_1 > row_2) return 1;
-					else if (row_1 < row_2) return -1;
-					else return 0;
-				});
-				
-
-				var col_headers = [];
-
-				//Create an header for each attribute in column:
-				$.each (self.currentDimensionsCols, function (idx, col_field) {
-
-					var col_h = $ ("<tr>", {
-
-						"id": 'col-header-' + col_field.replace (".","_")
-		
-					}).appendTo (pivot_table);					
-
-					col_headers.push (col_h);
-				});
-				
-				//Create the basic header where attributes in row are shown:
-				var html_table_header = $ ("<tr>", {
-
-					"id": 'row-header'
-		
-				}).appendTo (pivot_table);
-
-				//Put in the basic header the attribute in row:
-				$.each (self.currentDimensionsRows, function (idx, row_field) {
-
-					$.each (col_headers, function (idx, header) {
-					
-						$ ("<th>", {
-
-							"id": 'col-header-' + row_field + "-" + idx
-
-						}).appendTo (header).html ("-");
-					});
-
-					$ ("<th>", {
-
-						"id": 'header-' + row_field
-
-					}).appendTo (html_table_header).html (row_field);
-				});
-				
-				//Add the attribute in row:
-				$.each (rows_attributes, function (index, row) {
-
-					var html_row = $ ("<tr>", {
-
-						"id": 'pt_row_' + row.replace(";","_").replace(".","_")
-			
-					}).appendTo (pivot_table);
-					
-					var fields = row.split (";");
-					
-					console.log ("fields: " + fields);
-					
-					$.each (fields, function (idx_field, field) {
-					
-						if (field == "") return; 
-					
-						var th = $ ("<td>", {
-
-							"id": 'td-field-' + idx_field
-
-						}).appendTo (html_row).html (field);
-					});
-				});
-				
-				//Add the attribute in row:
-				$.each (cols_attributes, function (index, col) {
-				
-					console.log ("col fields " + col);
-				
-					var fields = col.split (";");
-					
-					$.each (self.currentMeasures, function (idx_m, measure) {
-					
-						$.each (fields, function (idx_field, field) {
-						
-							if (field == "") return; 
-						
-							//get the header where to add the attribute:
-							var field_col_header = $("#col-header-" + value_to_attribute [field].replace (".","_"));
-					
-							console.log ("value_to_attribute [field] " + value_to_attribute [field] + " " + field_col_header.id);
-							
-							var th = $ ("<th>", {
-
-								"id": 'th-field-' + value_to_attribute [field] + "_" + idx_field
-
-							}).appendTo (field_col_header).html (field);
-						
-						});
-						
-						var th = $ ("<th>", {
-
-							"id": 'th-measure-' + measure + "_" + idx_m
-
-						}).appendTo ($("#row-header")).html (measure);
-
-						//Add the values:
-						$.each (rows_attributes, function (index, row) {
-
-							console.log (JSON.stringify(cross_values));
-							console.log (JSON.stringify(cross_values [row][col]));
-
-							var value = "-";
-
-							if (cross_values [row]) {
-								
-								if(cross_values [row][col]) {
-
-									value = cross_values [row][col][measure];
-								}
-								
-							}
-							
-							var row_id_str = row.replace(";","_").replace(".","_");
-							var col_id_str = col.replace(";","_").replace(".","_");
-
-							var tr_row = $("#pt_row_" + row_id_str);
-							console.log ("row_id_str " + row_id_str);
-							console.log ("tr_row " + tr_row.attr("id"));
-
-							$("<td>", {
-
-								"id": 'td-measure-' + row_id_str + col_id_str
-
-							}).appendTo (tr_row).html (value);
-
-						});
-					});
-				});
+				console.log ("onDataReady()");		
+	
+				self.createPivotTable (table_container, data);
 			}				
 		);
 	
+}
+
+PlannificoPivot.prototype.filtersToString = function () {
+
+	var filters_label = "";
+
+	$.each (this.currentFilters, function (idx, filter) {
+
+		filters_label += filter.dimension + "." + filter.attribute + " " + filter.comparison + " " +  filter.filterValue + " AND ";
+	});
+
+	filters_label = filters_label.substring(0, filters_label.length - 5);
+
+	return filters_label;
+}
+
+PlannificoPivot.prototype.createPivotTable = function (table_container, data) {
+
+	var self = this;
+				
+	var pivot_table = $ ("<table>", {
+
+		"id": 'pivot-table'
+
+	}).appendTo (table_container);
+
+	var cols_attributes = [];
+	var rows_attributes = [];
+	
+	var value_to_attribute = {};
+
+	var cross_values = {};
+	
+	this.populatePivotDataStructure (data, cols_attributes, rows_attributes, value_to_attribute, cross_values);
+	
+	var col_headers = [];
+
+	//Create an header for each attribute in column:
+	$.each (self.currentDimensionsCols, function (idx, col_field) {
+
+		var col_h = $ ("<tr>", {
+
+			"id": 'col-header-' + col_field.replace (".","_")
+
+		}).appendTo (pivot_table);					
+
+		col_headers.push (col_h);
+	});
+	
+	//Create the basic header where attributes in row are shown:
+	var html_table_header = $ ("<tr>", {
+
+		"id": 'row-header'
+
+	}).appendTo (pivot_table);
+
+	//Put in the basic header the attribute in row:
+	$.each (self.currentDimensionsRows, function (idx, row_field) {
+
+		$.each (col_headers, function (idx, header) {
+		
+			$ ("<th>", {
+
+				"id": 'col-header-' + row_field + "-" + idx
+
+			}).appendTo (header).html ("-");
+		});
+
+		$ ("<th>", {
+
+			"id": 'header-' + row_field
+
+		}).appendTo (html_table_header).html (row_field);
+	});
+	
+	//Add the attribute in row:
+	$.each (rows_attributes, function (index, row) {
+
+		var html_row = $ ("<tr>", {
+
+			"id": 'pt_row_' + row.replace(";","_").replace(".","_")
+
+		}).appendTo (pivot_table);
+		
+		var fields = row.split (";");
+		
+		console.log ("fields: " + fields);
+		
+		$.each (fields, function (idx_field, field) {
+		
+			if (field == "") return; 
+		
+			var th = $ ("<td>", {
+
+				"id": 'td-field-' + idx_field
+
+			}).appendTo (html_row).html (field);
+		});
+	});
+	
+	//Add the attribute in columns:
+	$.each (cols_attributes, function (index, col) {
+	
+		console.log ("col fields " + col);
+	
+		var fields = col.split (";");
+		
+		$.each (self.currentMeasures, function (idx_m, measure) {
+		
+			$.each (fields, function (idx_field, field) {
+			
+				if (field == "") return; 
+			
+				//get the header where to add the attribute:
+				var field_col_header = $("#col-header-" + value_to_attribute [field].replace (".","_"));
+		
+				console.log ("value_to_attribute [field] " + value_to_attribute [field] + " " + field_col_header.id);
+				
+				var th = $ ("<th>", {
+
+					"id": 'th-field-' + value_to_attribute [field] + "_" + idx_field
+
+				}).appendTo (field_col_header).html (field);
+			
+			});
+			
+			var th = $ ("<th>", {
+
+				"id": 'th-measure-' + measure + "_" + idx_m
+
+			}).appendTo ($("#row-header")).html (measure);
+
+			//Add the values:
+			$.each (rows_attributes, function (index, row) {
+
+				console.log (JSON.stringify(cross_values));
+				console.log (JSON.stringify(cross_values [row][col]));
+
+				var value = "-";
+
+				if (cross_values [row]) {
+					
+					if(cross_values [row][col]) {
+
+
+						value = cross_values [row][col][measure];
+					}								
+				}
+				
+				var row_fields = row.split (";");
+				var col_fields = col.split (";");
+
+				var select_str = "";
+
+				$.each(row_fields, function (idx_field, field) {
+				
+					select_str += value_to_attribute [field] + "=" + field + ";";
+				});
+
+				$.each(col_fields, function (idx_field, field) {
+				
+					select_str += value_to_attribute [field] + "=" + field + ";";
+				});
+
+				select_str = select_str.substring (0, select_str.length);
+
+				var row_id_str = row.replace(";","_").replace(".","_");
+				var col_id_str = col.replace(";","_").replace(".","_");
+
+				var tr_row = $("#pt_row_" + row_id_str);
+				console.log ("row_id_str " + row_id_str);
+				console.log ("tr_row " + tr_row.attr("id"));
+
+				var measure_container = $("<td>", {
+
+					"id": 'td-measure-' + row_id_str + col_id_str,
+					"selectString": select_str,
+					"measure": measure,
+					"currentValue": value,
+					"class": "context-menu"
+
+				}).appendTo (tr_row).html (value);
+
+				
+
+			});
+		});
+	});
+
+	self.addContexMenu ();
+}
+
+/*Create the supporting structure needed to create the pivot:
+an associative array for each measure that given the attributes 
+in row and column returns the measure quantity:*/
+
+PlannificoPivot.prototype.populatePivotDataStructure = function (data, cols_attributes, rows_attributes, value_to_attribute, cross_values) {
+
+	var self = this;
+
+	$.each (data, function (index, row) {		
+
+		var measures_values = {};	
+
+		var col_attributes_string = "";
+		var row_attributes_string = "";
+		
+		$.each (row, function (field_idx, field) {
+		
+			if (field.measure) {						
+			
+				measures_values [field.measure] = field.value;							
+			
+			} else {
+				
+				if (self.currentDimensionsRows.indexOf (field.attribute) != -1) {
+				
+					row_attributes_string += field.value + ";";
+					
+				} else if (self.currentDimensionsCols.indexOf (field.attribute) != -1) { 
+				
+					col_attributes_string += field.value + ";";
+				}
+				value_to_attribute [field.value] = field.attribute;
+			}
+		});
+
+		col_attributes_string = col_attributes_string.substring(0, col_attributes_string.length - 1);
+		row_attributes_string = row_attributes_string.substring(0, row_attributes_string.length - 1);
+		
+		if (cols_attributes.indexOf (col_attributes_string) == -1) cols_attributes.push (col_attributes_string);
+		if (rows_attributes.indexOf (row_attributes_string) == -1) rows_attributes.push (row_attributes_string);
+		
+		console.log ("row_attributes_string " + row_attributes_string);
+		console.log ("col_attributes_string " + col_attributes_string);
+		
+		console.log ("measures_values " + measures_values);
+
+		if (!cross_values [row_attributes_string]) cross_values [row_attributes_string] = {};
+
+		cross_values [row_attributes_string][col_attributes_string] = measures_values;
+
+		console.log ("cross_values [row_attributes_string + _ + col_attributes_string] " + 
+			JSON.stringify (cross_values [row_attributes_string][col_attributes_string]));
+						
+	});
+
+	//Sort the attributes in rows:
+	rows_attributes = rows_attributes.sort (function (row_1,row_2) {
+	
+		if (row_1 > row_2) return 1;
+		else if (row_1 < row_2) return -1;
+		else return 0;
+	});
+	
+	//Sort the attributes in columns:
+	cols_attributes = cols_attributes.sort (function (row_1,row_2) {
+	
+		if (row_1 > row_2) return 1;
+		else if (row_1 < row_2) return -1;
+		else return 0;
+	});
+}
+
+PlannificoPivot.prototype.addContexMenu = function () {
+
+	var self = this;
+
+	$.contextMenu({
+		selector: '.context-menu', 
+		build: function($trigger, e) {
+		    
+			var select_str = $trigger.attr ("selectString");
+			var measure = $trigger.attr ("selectString");
+			var current_value = $trigger.attr ("currentValue");
+			var filters = self.filtersToString();
+
+			menuItems = {
+				"propotionalInc": {name: "Propotional Increment...", icon: "edit"},
+				"weightedInc": {name: "Weighted Increment...", icon: "cut"},
+				"equalInc": {name: "Equal Increment...", icon: "copy"}/*,
+				"sep1": "---------",
+				"quit": {name: "Quit", icon: "quit"}*/			
+			}
+
+			return {
+			callback: function(key, options) {
+
+				var m = "clicked: " + key;
+
+				dialog = $( "#dialog-form" ).dialog({
+					autoOpen: false,
+					height: 300,
+					width: 350,
+					modal: true,
+					buttons: {
+						"Apply": function() {
+
+							self.applyMeasureAction (key, select_str, filters, measure, current_value);
+						}, 
+						Cancel: function() {
+							dialog.dialog( "close" );
+						}
+					}
+				});
+				
+			},
+			items: menuItems
+			};
+		},
+		callback: function(key, options) {
+		    
+		},
+		items: {
+		    "propotionalInc": {name: "Propotional Increment...", icon: "edit"},
+		    "weightedInc": {name: "Weighted Increment...", icon: "cut"},
+		    "equalInc": {name: "Equal Increment...", icon: "copy"}/*,
+		    "sep1": "---------",
+		    "quit": {name: "Quit", icon: "quit"}*/
+		}
+    	});
 }
 
 /*
