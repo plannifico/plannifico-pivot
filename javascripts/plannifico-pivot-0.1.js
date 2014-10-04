@@ -629,7 +629,7 @@ PlannificoPivot.prototype.addAttributeSelection = function (dims_container, id_p
 			
 			var attribute_container = $ ("<li>", {
 				
-				"id":  "droppable-" + dimension + "-" + attribute,
+				"id":  "droppable-" + dimension + "-" + attribute.replace(" ","_"),
 				"pl-label": dimension + "." + attribute,
 				"class": 'small span-1 ' + additional_classes,
 				"parent-id": dim_attribute_selection.attr("id")
@@ -653,7 +653,7 @@ PlannificoPivot.prototype.addDraggableDimensions = function (label, elements, id
 	
 		$ ("<h3>", {
 
-			"id": id_prefix + element,
+			"id": id_prefix + element.replace(" ","_"),
 			"class": 'span-2 border ui-widget-content' 
 			
 		}).appendTo (dims_container)
@@ -671,8 +671,7 @@ PlannificoPivot.prototype.addDraggableDimensions = function (label, elements, id
 	
 }
 
-PlannificoPivot.prototype.addDraggableMeasures = function (label, elements, id_prefix, additional_classes) {	
-	
+PlannificoPivot.prototype.addDraggableMeasures = function (label, elements, id_prefix, additional_classes) {		
 
 	var m_container = $ ("<div>", {		
 		
@@ -966,98 +965,105 @@ PlannificoPivot.prototype.applyDroppableFilters = function () {
 			var dimension = $(ui.draggable).attr ("pl-label").split(".")[0];
 			var attribute = $(ui.draggable).attr ("pl-label").split(".")[1];
 			
-			var filter_selection = $('<select>', 
-
-				{"id": 'filter-selection-' + dropped_dim_id, "class": 'span-5 border', "dimension": dimension, "attribute": attribute}
-
-			).appendTo (dropped_dim);			
-
-			var filter_elements = self.getDimAttributeElements (dimension, attribute);
-
-			$.each (filter_elements,function (index,element) {
-
-				filter_selection.append (new Option(element, element));
-			});
+			self.getDimAttributeElements (dimension, attribute, function (filter_elements) {
 			
-			$( "#filter-selection-" + dropped_dim_id ).selectmenu ({
+				var filter_selection = $('<select>', 
 
-				"change": function( event, data ) {
+					{"id": 'filter-selection-' + dropped_dim_id, "class": 'span-5 border', "dimension": dimension, "attribute": attribute}
 
-					console.log ("filters " + data.item.value);
-					console.log ("dim " + $(this).attr("dimension"));
-					console.log ("attr " + $(this).attr("attribute"));
-
-					self.isQueryChanged = true;
-			       	}
-			});
-
-			$( "#comparison-selection-" + dropped_dim_id ).selectmenu ({
-
-				"change": function( event, data ) {
-
-					console.log ("comparison: " + data.item.value);
-
-					self.isQueryChanged = true;
-			       	}
-			});
-
-			$( "#delbtn-filter-" + dropped_dim_id )
-			      .button()
-			      .click (function( event ) {
+				).appendTo (dropped_dim);	
 				
-				console.log("$(this).id " + $(this).attr ("id"));
+				console.log ("getDimAttributeElements filter_elements = " + filter_elements);
+			
+				$.each (filter_elements,function (index,element) {
+
+					console.log ("getDimAttributeElements filter_element = " + element);
+					console.log ("getDimAttributeElements filter_selection = " + filter_selection.id);
+					filter_selection.append (new Option(element, element));
+				});
 				
-				//Remove the filter from the selection area
-				var dropped_id = $(this).attr ("id").replace ("delbtn-filter-","");	
+				$( "#filter-selection-" + dropped_dim_id ).selectmenu ({
 
-				$("#dropped-" + dropped_id).remove();
+					"change": function( event, data ) {
 
-				//Show again the filter element in the original selection area
-				$("#" + $(this).attr("id") + "_attribute_sel").toggle();
-				
-				$("#droppable-" + dropped_id).show();
+						console.log ("filters " + data.item.value);
+						console.log ("dim " + $(this).attr("dimension"));
+						console.log ("attr " + $(this).attr("attribute"));
 
-				//Find the element in the currentFilters array:
+						self.isQueryChanged = true;
+						}
+				});
 
-				var index = $.map(self.currentFilters,
-					function (element, index) { 
-						if ((element.dimension == dimension) && (element.attribute == attribute))
-							return index;
-					}
-				);
+				$( "#comparison-selection-" + dropped_dim_id ).selectmenu ({
 
-				if (index != -1) {
+					"change": function( event, data ) {
+
+						console.log ("comparison: " + data.item.value);
+
+						self.isQueryChanged = true;
+						}
+				});
+
+				$( "#delbtn-filter-" + dropped_dim_id )
+					  .button()
+					  .click (function( event ) {
 					
-					self.currentFilters.splice(index, 1);
-				} 
+					console.log("$(this).id " + $(this).attr ("id"));
+					
+					//Remove the filter from the selection area
+					var dropped_id = $(this).attr ("id").replace ("delbtn-filter-","");	
 
-				self.isQueryChanged = true;
+					$("#dropped-" + dropped_id).remove();
+
+					//Show again the filter element in the original selection area
+					$("#" + $(this).attr("id") + "_attribute_sel").toggle();
+					
+					$("#droppable-" + dropped_id).show();
+
+					//Find the element in the currentFilters array:
+
+					var index = $.map(self.currentFilters,
+						function (element, index) { 
+							if ((element.dimension == dimension) && (element.attribute == attribute))
+								return index;
+						}
+					);
+
+					if (index != -1) {
+						
+						self.currentFilters.splice(index, 1);
+					} 
+
+					self.isQueryChanged = true;
+				});
+				
+				$(ui.draggable).hide();
+				
+				console.log ("dropTarget.id " + $(dropTarget).attr ("id"));
+				
+				var target_id = $(dropTarget).attr ("id");
+				
+				if (target_id == "pivot-selection-filters") {
+					
+					var comparisogn_sign = $( "#comparison-selection-" + dropped_dim_id ).val();
+					var filter_selection = $( "#filter-selection-" + dropped_dim_id ).val();
+
+					console.log ("filter.dimension " + dimension);
+					console.log ("filter.attribute " + attribute);
+					console.log ("filter.comparisogn " + comparisogn_sign);
+					console.log ("filter.value " + filter_selection);
+					
+					self.currentFilters.push (
+						{"dimension":dimension,
+						"attribute":attribute,
+						"comparison":comparisogn_sign,
+						"filterValue":filter_selection});
+					
+					self.isQueryChanged = true;			
+				}
+			
+			
 			});
-			
-			$(ui.draggable).hide();
-			
-			console.log ("dropTarget.id " + $(dropTarget).attr ("id"));
-			
-			var target_id = $(dropTarget).attr ("id");
-			
-			if (target_id == "pivot-selection-filters") {
-				
-				var comparisogn_sign = $( "#comparison-selection-" + dropped_dim_id ).val();
-				var filter_selection = $( "#filter-selection-" + dropped_dim_id ).val();
-
-				console.log ("filter.dimension " + dimension);
-				console.log ("filter.attribute " + attribute);
-				console.log ("filter.comparisogn " + comparisogn_sign);
-				console.log ("filter.value " + filter_selection);
-				
-				self.currentFilters.push (
-					{"dimension":dimension,
-					"attribute":attribute,
-					"comparison":comparisogn_sign,
-					"filterValue":filter_selection});
-				
-				self.isQueryChanged = true;			
-			}
 		}
 	});
 

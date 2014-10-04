@@ -104,11 +104,11 @@
 					{attribute: "period.month", value:"201303"}, 
 					{measure: "quantity",value:50}]]);
 		},
-		function (dimension, attribute) {
+		function (dimension, attribute, when_ready) {
 		
 			console.log ("getDimAttributeElements " + dimension + "." + attribute);
 
-			return dimension_elements [dimension][attribute];
+			when_ready (dimension_elements [dimension][attribute]);
 		},
 		function (action, select_str, filters, measure, current_value, new_value) {
 		
