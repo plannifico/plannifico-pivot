@@ -223,7 +223,7 @@ PlannificoPivot.prototype.createPivotTable = function (table_container, data) {
 
 		var col_h = $ ("<tr>", {
 
-			"id": 'col-header-' + col_field.replace (".","_")
+			"id": 'col-header-' + self.field2id (col_field)
 
 		}).appendTo (pivot_table);					
 
@@ -261,7 +261,7 @@ PlannificoPivot.prototype.createPivotTable = function (table_container, data) {
 
 		var html_row = $ ("<tr>", {
 
-			"id": 'pt_row_' + row.replace(";","_").replace(".","_")
+			"id": 'pt_row_' + self.field2id (row)
 
 		}).appendTo (pivot_table);
 		
@@ -295,7 +295,7 @@ PlannificoPivot.prototype.createPivotTable = function (table_container, data) {
 				if (field == "") return; 
 			
 				//get the header where to add the attribute:
-				var field_col_header = $("#col-header-" + value_to_attribute [field].replace (".","_"));
+				var field_col_header = $("#col-header-" + self.field2id (value_to_attribute [field]));
 		
 				console.log ("value_to_attribute [field] " + value_to_attribute [field] + " " + field_col_header.id);
 				
@@ -347,8 +347,8 @@ PlannificoPivot.prototype.createPivotTable = function (table_container, data) {
 
 				select_str = select_str.substring (0, select_str.length);
 
-				var row_id_str = row.replace(";","_").replace(".","_");
-				var col_id_str = col.replace(";","_").replace(".","_");
+				var row_id_str = self.field2id (row);
+				var col_id_str = self.field2id (col);
 
 				var tr_row = $("#pt_row_" + row_id_str);
 				console.log ("row_id_str " + row_id_str);
@@ -387,6 +387,10 @@ PlannificoPivot.prototype.populatePivotDataStructure = function (data, cols_attr
 
 		var col_attributes_string = "";
 		var row_attributes_string = "";
+
+		console.log ("self.currentDimensionsCols " + self.currentDimensionsCols)
+		console.log ("self.currentDimensionsRows " + self.currentDimensionsRows)
+		
 		
 		$.each (row, function (field_idx, field) {
 		
@@ -395,6 +399,8 @@ PlannificoPivot.prototype.populatePivotDataStructure = function (data, cols_attr
 				measures_values [field.measure] = field.value;							
 			
 			} else {
+
+				console.log ("field.attribute " + field.attribute);
 				
 				if (self.currentDimensionsRows.indexOf (field.attribute) != -1) {
 				
@@ -610,6 +616,8 @@ PlannificoPivot.prototype.createPivotSelection = function (pivot_selection) {
 
 PlannificoPivot.prototype.addAttributeSelection = function (dims_container, id_prefix, additional_classes, dimensions, dimension) {
 
+	var self = this;
+
 	var dim_attribute_selection = $ ("<ul>", {
 				
 		"id":  id_prefix + dimension + '_attribute_sel'
@@ -629,7 +637,7 @@ PlannificoPivot.prototype.addAttributeSelection = function (dims_container, id_p
 			
 			var attribute_container = $ ("<li>", {
 				
-				"id":  "droppable-" + dimension + "-" + attribute.replace(" ","_"),
+				"id":  "droppable-" + dimension + "-" + self.field2id (attribute),
 				"pl-label": dimension + "." + attribute,
 				"class": 'small span-1 ' + additional_classes,
 				"parent-id": dim_attribute_selection.attr("id")
@@ -653,7 +661,7 @@ PlannificoPivot.prototype.addDraggableDimensions = function (label, elements, id
 	
 		$ ("<h3>", {
 
-			"id": id_prefix + element.replace(" ","_"),
+			"id": id_prefix + this.field2id (element),
 			"class": 'span-2 border ui-widget-content' 
 			
 		}).appendTo (dims_container)
@@ -946,11 +954,11 @@ PlannificoPivot.prototype.applyDroppableFilters = function () {
 			var dropped_dim = $('<div>', {"id": 'dropped-' + dropped_dim_id,"class": 'span-20'}).appendTo (dropTarget);
 			
 			//Add the dimension and attribute to filter:
-			var dropped_dim_lb = $('<button>', 
-				{
+			var dropped_dim_lb = $('<button>', {
+
 				"id": 'delbtn-filter-' + dropped_dim_id, 
-				"class": 'span-5 border'}
-			).appendTo (dropped_dim).html($(ui.draggable).attr ("pl-label"));
+				"class": 'span-5 border'
+			}).appendTo (dropped_dim).html($(ui.draggable).attr ("pl-label"));
 			
 			//Add the selection for the comparison sign
 			var comparison_sign = $('<select>', 
@@ -986,12 +994,32 @@ PlannificoPivot.prototype.applyDroppableFilters = function () {
 
 					"change": function( event, data ) {
 
-						console.log ("filters " + data.item.value);
+						console.log ("filter-selection-" + dropped_dim_id);
 						console.log ("dim " + $(this).attr("dimension"));
 						console.log ("attr " + $(this).attr("attribute"));
+						console.log ("value " + $(this).val ());
+
+						var selected_dimension = $(this).attr("dimension");
+						var selected_attribute = $(this).attr("attribute");
+						var selected_val = $(this).val ();
+
+						$.each (self.currentFilters, function (idx, filter) {
+
+							console.log ("filter " + JSON.stringify (filter));
+							
+							if ((filter.dimension == selected_dimension) && 
+							    (filter.attribute == selected_attribute)) {
+
+								filter.filterValue = selected_val;
+
+							}
+						});
 
 						self.isQueryChanged = true;
-						}
+
+						console.log ("changed");
+
+					}
 				});
 
 				$( "#comparison-selection-" + dropped_dim_id ).selectmenu ({
@@ -1000,8 +1028,10 @@ PlannificoPivot.prototype.applyDroppableFilters = function () {
 
 						console.log ("comparison: " + data.item.value);
 
+						
+
 						self.isQueryChanged = true;
-						}
+					}
 				});
 
 				$( "#delbtn-filter-" + dropped_dim_id )
@@ -1066,7 +1096,10 @@ PlannificoPivot.prototype.applyDroppableFilters = function () {
 			});
 		}
 	});
-
 }
 
+PlannificoPivot.prototype.field2id = function (field) {
+
+	return field.replace(";","PV").replace(".","P").replace(/ /g,"S").replace(/\//g,"SL");
+}
 
