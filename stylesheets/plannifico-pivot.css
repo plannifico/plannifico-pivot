@@ -1,1 +1,21 @@
-.debug_grid: {background-color:#fff; border-width:1px; border-style: solid; border-color:#fbc2c4;}
+.p-pivot-header {
+	font-size: 11px;
+	color: #0B173B;
+	background: #D8D8D8;
+}
+
+.p-pivot-column-header {
+	font-size: 12px;
+	text-align: center; 
+	color: #0B173B;
+}
+
+.p-pivot-row-header {
+	font-size: 12px;
+}
+
+.p-pivot-measure {
+	font-size: 12px;
+	text-align: center; 
+	color: #0000FF;
+}
