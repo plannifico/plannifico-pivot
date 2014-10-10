@@ -80,7 +80,7 @@ function PlannificoPivot (i_container, i_configuration, i_on_change_query, i_get
 		this.applyMeasureAction = i_apply_measure_action;		
 		
 	} else 
-		this.applyMeasureAction = function (a,s,f,m,v) {console.log ("this.applyMeasureAction not set");};
+		this.applyMeasureAction = function () {console.log ("this.applyMeasureAction not set");};
 
 }
 
@@ -153,8 +153,6 @@ PlannificoPivot.prototype.refreshDataAreaArea = function () {
 	
 		data_area.empty ();
 	}	
-	
-	
 
 	var filter_container = $ ("<div>", {
 		
@@ -180,7 +178,10 @@ PlannificoPivot.prototype.refreshDataAreaArea = function () {
 
 	var self = this;
 
-	if (this.isQueryChanged)
+	if (this.isQueryChanged) {
+
+		$("data-grid-container").addClass ("currently-loading-pivot");
+
 		this.onChangeQuery (
 			this.currentDimensionsRows,
 			this.currentDimensionsCols,
@@ -189,10 +190,13 @@ PlannificoPivot.prototype.refreshDataAreaArea = function () {
 			function (data) {
 
 				console.log ("onDataReady()");		
+
+				$("data-grid-container").removeClass ("currently-loading-pivot");
 	
 				self.createPivotTable (table_container, data);
 			}				
 		);
+	}
 	
 }
 
@@ -535,10 +539,29 @@ PlannificoPivot.prototype.addContexMenu = function () {
 						var new_value = $("#new_value_field").val();
 					
 						console.log ("new value = " + new_value);
+
+						$trigger.empty ();
+
+						$trigger.addClass("currently-writing-cell");
 					
-						self.applyMeasureAction (key, select_str, filters, measure, current_value, new_value);
+						self.applyMeasureAction (
+							key, 
+							select_str, 
+							filters, 
+							measure,
+							current_value, 
+							new_value,
+							function () {
+								console.log ("applyMeasureAction [DONE]");
+
+								$trigger.removeClass ("currently-writing-cell");
+								$trigger.html(new_value);					
+								
+							}
+						);
 					
 						dialogBox.dialog( "close" );
+						dialogBox.empty();
 						dialogBox.remove();
 					};
 						
